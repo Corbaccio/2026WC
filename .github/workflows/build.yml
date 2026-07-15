@@ -1,0 +1,43 @@
+name: Build LaybackPassion
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          pip install -q -r requirements.txt pyinstaller
+      - name: Install Playwright browsers
+        run: playwright install chromium
+      - name: Build .app
+        run: pyinstaller build.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LaybackPassion-mac
+          path: dist/LaybackPassion.app
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          pip install -q -r requirements.txt pyinstaller
+      - name: Install Playwright browsers
+        run: playwright install chromium
+      - name: Build .exe
+        run: pyinstaller build-win.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LaybackPassion-win
+          path: dist/LaybackPassion.exe

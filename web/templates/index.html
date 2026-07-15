@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaybackPassion</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+  background: #0a0a0f;
+  color: #ddd;
+  min-height: 100vh;
+  line-height: 1.618;
+}
+.page-header {
+  text-align: center;
+  padding: 44px 24px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.page-header h1 {
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 4px;
+}
+.page-header h1 span { color: #f59e0b; }
+
+/* Golden ratio subtitle with light shimmer */
+.page-header .subtitle {
+  font-size: 20px;
+  color: transparent;
+  margin-top: 8px;
+  line-height: 1.618;
+  background: linear-gradient(
+    90deg,
+    #444 0%,
+    #444 25%,
+    #f5a623 40%,
+    #ffd700 50%,
+    #f5a623 60%,
+    #444 75%,
+    #444 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer 5s ease-in-out infinite;
+  letter-spacing: 0.5px;
+}
+@keyframes shimmer {
+  0% { background-position: 300% center; }
+  50% { background-position: 0% center; }
+  100% { background-position: -300% center; }
+}
+
+.status-bar {
+  display: flex; justify-content: center; align-items: center; gap: 16px;
+  font-size: 14px; color: #666; margin-bottom: 14px;
+}
+.status-bar .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+.refresh-btn {
+  background: none; border: 1px solid #2a2a3e; color: #555;
+  padding: 5px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.refresh-btn:hover { border-color: #f59e0b; color: #f59e0b; }
+
+/* === Dual Branch Layout === */
+.branches-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 0;
+}
+.branches-wrap::-webkit-scrollbar { height: 6px; }
+.branches-wrap::-webkit-scrollbar-track { background: #0a0a0f; }
+.branches-wrap::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+
+.branches-inner {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 1200px;
+  padding: 0 24px;
+}
+
+.branch-side {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.branch-divider {
+  width: 48px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.branch-divider::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 12px;
+  width: 2px;
+  background: #1a1a2e;
+}
+
+.match-card {
+  width: 172px;
+  background: #12121f;
+  border-radius: 7px;
+  border: 1px solid #1e1e32;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.match-card:hover { border-color: #f59e0b44; box-shadow: 0 0 20px #f59e0b15; }
+.match-card.has-replay { border-left: 4px solid #f59e0b66; }
+.match-card.watched { opacity: 0.3; }
+
+.match-card .team-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 6px;
+  min-height: 34px;
+}
+.match-card .team-row + .team-row {
+  border-top: 1px solid #1a1a2e;
+}
+.match-card .team-row .flag { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.match-card .team-row .name { font-size: 16px; font-weight: 500; color: #ccc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-card .team-row .btns { display: flex; gap: 4px; flex-shrink: 0; }
+.match-card .team-row .btns .btn {
+  background: #2a2a3e; border: none; color: #888;
+  font-size: 14px; padding: 2px 10px; border-radius: 4px;
+  cursor: pointer; transition: all 0.12s; line-height: 1.5;
+}
+.match-card .team-row .btns .btn:hover { background: #f59e0b; color: #000; }
+.match-card .team-row .btns .btn.dim { color: #444; cursor: default; }
+.match-card .team-row .btns .btn.dim:hover { background: #2a2a3e; color: #444; }
+.match-card .time-tag {
+  font-size: 13px; color: #555; margin-left: auto; flex-shrink: 0;
+}
+.match-card .upcoming-tag {
+  font-size: 13px; color: #555; background: #1a1a2e;
+  padding: 2px 6px; border-radius: 3px; margin-left: auto; flex-shrink: 0;
+}
+
+#connector-svg {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.match-card { z-index: 1; }
+
+/* Final section below trees — golden ratio spacing */
+.final-section {
+  text-align: center;
+  padding: 20px 24px 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+.final-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+.final-row .adv-team {
+  font-size: 18px;
+  color: #f59e0b99;
+  padding: 6px 22px;
+  background: #12121f;
+  border-radius: 7px;
+  border: 1px solid #f59e0b22;
+}
+.final-row .adv-team.dim { color: #444; border-color: #1a1a2e; }
+.final-row .adv-vs {
+  font-size: 16px;
+  color: #f59e0b66;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+.final-placeholder {
+  font-size: 16px; color: #444; padding: 14px 0;
+}
+.final-time {
+  font-size: 14px; color: #555; margin-top: 6px;
+}
+.third-row {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #1a1a2e;
+}
+
+#connector-svg-final {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.footer {
+  text-align: center; padding: 36px 24px; color: #1a1a2e; font-size: 14px;
+}
+.footer a { color: #1a1a2e; text-decoration: none; }
+.footer a:hover { color: #2a2a4e; }
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #1a1a2e; color: #fff; padding: 10px 24px; border-radius: 8px;
+  font-size: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  transition: all 0.3s; opacity: 0; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+.loading {
+  text-align: center; padding: 80px; color: #555; font-size: 16px;
+}
+.loading .spinner {
+  width: 36px; height: 36px; border: 3px solid #1a1a2e;
+  border-top-color: #f59e0b; border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8); z-index: 1000;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: #1a1a2e; border-radius: 12px; padding: 24px;
+  max-width: 340px; width: 90%; text-align: center;
+}
+.modal-box .icon { font-size: 36px; margin-bottom: 10px; }
+.modal-box h3 { font-size: 15px; color: #fff; margin-bottom: 6px; }
+.modal-box p { font-size: 12px; color: #999; line-height: 1.5; }
+.modal-btn {
+  margin-top: 14px; background: #f59e0b; border: none; color: #000;
+  padding: 7px 22px; border-radius: 5px; font-weight: 600; cursor: pointer;
+  font-size: 12px;
+}
+.modal-btn:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>Layback<span>Passion</span></h1>
+  <div class="subtitle">有多少经典的刹那，能做你回味坐标</div>
+  <div class="status-bar">
+    <span class="dot"></span>
+    <span id="matchCount">加载中...</span>
+    <button class="refresh-btn" onclick="refreshData()">刷新</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>正在获取赛程数据...</p>
+  </div>
+</div>
+
+<div class="footer">
+  <a href="https://worldcup.cctv.com" target="_blank">央视世界杯官网</a>
+  <span style="margin:0 8px;color:#1a1a2e">·</span>
+  <a href="#" onclick="shutdown();return false" style="color:#f59e0b;font-weight:600;text-decoration:none" onmouseover="this.style.color='#ffd700'" onmouseout="this.style.color='#f59e0b'">退出</a>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="icon" id="modalIcon">🎬</div>
+    <h3 id="modalTitle">正在播放...</h3>
+    <p id="modalText">正在打开全场回放，请稍候</p>
+    <button class="modal-btn" onclick="closeModal()">知道了</button>
+  </div>
+</div>
+
+<script>
+var FLAGS = {
+  "法国":"🇫🇷","西班牙":"🇪🇸","英格兰":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","阿根廷":"🇦🇷","巴西":"🇧🇷","葡萄牙":"🇵🇹",
+  "德国":"🇩🇪","荷兰":"🇳🇱","意大利":"🇮🇹","克罗地亚":"🇭🇷","墨西哥":"🇲🇽","南非":"🇿🇦",
+  "韩国":"🇰🇷","捷克":"🇨🇿","加拿大":"🇨🇦","波黑":"🇧🇦","美国":"🇺🇸","巴拉圭":"🇵🇾",
+  "卡塔尔":"🇶🇦","瑞士":"🇨🇭","摩洛哥":"🇲🇦","海地":"🇭🇹","苏格兰":"🏴󠁧󠁢󠁳󠁴󠁿",
+  "澳大利亚":"🇦🇺","土耳其":"🇹🇷","库拉索":"🇨🇼","日本":"🇯🇵","瑞典":"🇸🇪","突尼斯":"🇹🇳",
+  "科特迪瓦":"🇨🇮","厄瓜多尔":"🇪🇨","比利时":"🇧🇪","埃及":"🇪🇬","沙特阿拉伯":"🇸🇦",
+  "乌拉圭":"🇺🇾","佛得角":"🇨🇻","伊朗":"🇮🇷","新西兰":"🇳🇿","塞内加尔":"🇸🇳",
+  "伊拉克":"🇮🇶","挪威":"🇳🇴","阿尔及利亚":"🇩🇿","奥地利":"🇦🇹","约旦":"🇯🇴",
+  "哥伦比亚":"🇨🇴","刚果（金）":"🇨🇩","乌兹别克斯坦":"🇺🇿","巴拿马":"🇵🇦",
+  "加纳":"🇬🇭","沙特":"🇸🇦","刚果(金)":"🇨🇩",
+};
+
+// Known match results (when CCTV doesn't provide winner data but result is public)
+var KNOWN_RESULTS = {
+  "24051038": "西班牙",  // 半决赛 法国 vs 西班牙 → 西班牙晋级决赛
+};
+
+var SLOT_H = 36;
+var MATCH_W = 172;
+var ROUND_GAP = 42;
+var PAD = 24;
+var _statusTimer = null;
+
+function formatTime(isoStr) {
+  if (!isoStr) return '';
+  try {
+    var d = new Date(isoStr);
+    if (isNaN(d)) return '';
+    return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+  } catch(e) { return ''; }
+}
+
+function findMatchForTeam(matches, team) {
+  if (!matches) return null;
+  return matches.find(function(m) { return m.home === team || m.away === team; }) || null;
+}
+
+function buildSubBranch(semiMatch, allRounds) {
+  var result = {};
+  result['半决赛'] = [semiMatch];
+
+  var qfMs = allRounds['1/4决赛'] || [];
+  var r16Ms = allRounds['1/8决赛'] || [];
+  var r32Ms = allRounds['1/16决赛'] || [];
+
+  var qf1 = findMatchForTeam(qfMs, semiMatch.home);
+  var qf2 = findMatchForTeam(qfMs, semiMatch.away);
+  result['1/4决赛'] = [];
+  if (qf1) result['1/4决赛'].push(qf1);
+  if (qf2) result['1/4决赛'].push(qf2);
+
+  var qfTeams = [];
+  result['1/4决赛'].forEach(function(m) { qfTeams.push(m.home, m.away); });
+  result['1/8决赛'] = [];
+  qfTeams.forEach(function(t) {
+    var m = findMatchForTeam(r16Ms, t);
+    if (m && result['1/8决赛'].indexOf(m) === -1) result['1/8决赛'].push(m);
+  });
+
+  var r16Teams = [];
+  result['1/8决赛'].forEach(function(m) { r16Teams.push(m.home, m.away); });
+  result['1/16决赛'] = [];
+  r16Teams.forEach(function(t) {
+    var m = findMatchForTeam(r32Ms, t);
+    if (m && result['1/16决赛'].indexOf(m) === -1) result['1/16决赛'].push(m);
+  });
+
+  return result;
+}
+
+function getMatchTop(r, i) {
+  var gap = Math.pow(2, r);
+  return (i * gap * 2 + gap) * SLOT_H;
+}
+
+function totalSlotsNeeded(order, branch, side) {
+  var maxSlot = 0;
+  for (var r = 0; r < order.length; r++) {
+    var origR = side === 'right' ? (order.length - 1 - r) : r;
+    var ms = branch[order[r]] || [];
+    for (var i = 0; i < ms.length; i++) {
+      var bottom = getMatchTop(origR, i) + 2 * SLOT_H;
+      if (bottom > maxSlot) maxSlot = bottom;
+    }
+  }
+  return maxSlot + 10;
+}
+
+function matchCardHTML(m, idSuffix, isStandalone) {
+  var now = new Date();
+  var matchTime = new Date(m.time);
+  var isPast = matchTime < now;
+  var hFlag = FLAGS[m.home] || '🏳';
+  var aFlag = FLAGS[m.away] || '🏳';
+  var timeStr = formatTime(m.time);
+
+  var cls = 'match-card';
+  if (m.replay_available) cls += ' has-replay';
+  if (m.watched) cls += ' watched';
+
+  var btn;
+  if (m.watched) {
+    btn = '<span class="btn dim">✓</span>';
+  } else if (isPast) {
+    btn = '<button class="btn" onclick="playMatch(\''+m.id+'\',event)">🎙</button>';
+  } else {
+    btn = '<span class="btn dim">即将</span>';
+  }
+  var upcoming = isPast ? '' : '<span class="upcoming-tag">即将</span>';
+
+  var pos = isStandalone ? 'position:relative' : 'position:absolute;left:0;top:0';
+  var timeHtml = timeStr ? '<span class="time-tag">'+timeStr+'</span>' : '';
+  return '<div id="mc-'+idSuffix+'" class="'+cls+'" style="'+pos+';height:'+(2*SLOT_H)+'px">' +
+    '<div class="team-row"><span class="flag">'+hFlag+'</span><span class="name">'+m.home+'</span><span class="btns">'+btn+'</span></div>' +
+    '<div class="team-row"><span class="flag">'+aFlag+'</span><span class="name">'+m.away+'</span>'+timeHtml+upcoming+'</div>' +
+    '</div>';
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 2000);
+}
+
+function showModal(icon, title, text) {
+  document.getElementById('modalIcon').textContent = icon;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').textContent = text;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+function shutdown() {
+  if (confirm('确定退出？')) {
+    fetch('/api/shutdown').then(function() {
+      document.body.innerHTML = '<div style="text-align:center;padding:60px;color:#555;font-size:16px"><p>已退出，可以关闭此页面</p></div>';
+    });
+  }
+}
+
+function playMatch(id, ev) {
+  if (ev) ev.stopPropagation();
+  showModal('🎙', '正在连接...', '正在打开解说版，比分已隐藏');
+  fetch('/api/play/' + id + '?version=' + encodeURIComponent('解说'))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { showModal('❌', '播放失败', data.error); return; }
+      pollStatus();
+    })
+    .catch(function(e) { showModal('❌', '播放失败', e.message); });
+}
+
+function pollStatus() {
+  if (_statusTimer) clearInterval(_statusTimer);
+  _statusTimer = setInterval(function() {
+    fetch('/api/play-status').then(function(r) { return r.json(); }).then(function(data) {
+      if (data.error) { clearInterval(_statusTimer); showModal('😅', '播放失败', data.error); return; }
+      if (data.message === '播放完成') {
+        clearInterval(_statusTimer);
+        setTimeout(loadData, 1000);
+      }
+    }).catch(function() {});
+  }, 2000);
+  setTimeout(function() { if (_statusTimer) { clearInterval(_statusTimer); _statusTimer = null; } }, 60000);
+}
+
+function refreshData() {
+  showToast('正在刷新...');
+  fetch('/api/refresh').then(function() { return loadData(); })
+    .then(function() { showToast('刷新完成'); })
+    .catch(function() { showToast('刷新失败'); });
+}
+
+function renderBranchSVG(branchId, order, branch, dir) {
+  var svg = document.getElementById('connector-svg-'+branchId);
+  var container = document.getElementById('branch-inner-'+branchId);
+  if (!svg || !container) return;
+  var cw = container.scrollWidth;
+  var ch = container.scrollHeight;
+  svg.setAttribute('width', cw);
+  svg.setAttribute('height', ch);
+  svg.innerHTML = '';
+
+  var ns = 'http://www.w3.org/2000/svg';
+  var buf = [];
+
+  for (var r = 0; r < order.length - 1; r++) {
+    var srcRoundIdx = dir === 1 ? r : r + 1;
+    var tgtRoundIdx = dir === 1 ? r + 1 : r;
+    var srcMs = branch[order[srcRoundIdx]] || [];
+    var tgtMs = branch[order[tgtRoundIdx]] || [];
+    if (!srcMs.length || !tgtMs.length) continue;
+
+    for (var j = 0; j < tgtMs.length; j++) {
+      var i1 = 2 * j;
+      var i2 = 2 * j + 1;
+      if (i1 >= srcMs.length || i2 >= srcMs.length) continue;
+
+      var sid = 'mc-'+branchId+'-'+order[srcRoundIdx]+'-'+i1;
+      var s2d = 'mc-'+branchId+'-'+order[srcRoundIdx]+'-'+i2;
+      var tid = 'mc-'+branchId+'-'+order[tgtRoundIdx]+'-'+j;
+
+      var e1 = document.getElementById(sid);
+      var e2 = document.getElementById(s2d);
+      var et = document.getElementById(tid);
+      if (!e1 || !e2 || !et) continue;
+
+      var r1 = e1.getBoundingClientRect();
+      var r2 = e2.getBoundingClientRect();
+      var rt = et.getBoundingClientRect();
+      var rc = container.getBoundingClientRect();
+
+      var x1, x2, xt;
+      if (dir === 1) {
+        x1 = r1.right - rc.left;
+        x2 = r2.right - rc.left;
+        xt = rt.left - rc.left;
+      } else {
+        x1 = r1.left - rc.left;
+        x2 = r2.left - rc.left;
+        xt = rt.right - rc.left;
+      }
+      var y1 = (r1.top + r1.bottom) / 2 - rc.top;
+      var y2 = (r2.top + r2.bottom) / 2 - rc.top;
+      var yt = (rt.top + rt.bottom) / 2 - rc.top;
+      var ym = (y1 + y2) / 2;
+      var xm = (x1 + xt) / 2;
+
+      var d = 'M '+x1+' '+y1+' L '+xm+' '+y1+' L '+xm+' '+ym;
+      d += ' M '+x2+' '+y2+' L '+xm+' '+y2+' L '+xm+' '+ym;
+      d += ' M '+xm+' '+ym+' L '+xt+' '+ym;
+      buf.push(d);
+    }
+  }
+
+  for (var k = 0; k < buf.length; k++) {
+    var path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', buf[k]);
+    path.setAttribute('stroke', '#2a2a3e');
+    path.setAttribute('stroke-width', '1');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+  }
+}
+
+function renderBranch(branchData, semiMatch, side, title) {
+  var order;
+  if (side === 'left') {
+    order = ['1/16决赛','1/8决赛','1/4决赛','半决赛'];
+  } else {
+    order = ['半决赛','1/4决赛','1/8决赛','1/16决赛'];
+  }
+  var dir = side === 'left' ? 1 : -1;
+  var branchId = side;
+  var totalH = totalSlotsNeeded(order, branchData, side);
+  var numRounds = order.length;
+  var lastLeft = (numRounds - 1) * (MATCH_W + ROUND_GAP) + PAD;
+  var totalW = lastLeft + MATCH_W + PAD;
+
+  function origR(r) { return side === 'right' ? (order.length - 1 - r) : r; }
+
+  var html = '<div class="branch-side" style="width:'+(totalW+1)+'px;position:relative">';
+  html += '<div id="branch-inner-'+branchId+'" style="position:relative;height:'+totalH+'px;width:'+totalW+'px;margin:0 auto">';
+  html += '<svg id="connector-svg-'+branchId+'" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0"></svg>';
+
+  for (var r = 0; r < order.length; r++) {
+    var stage = order[r];
+    var left = r * (MATCH_W + ROUND_GAP) + PAD;
+    var ms = branchData[stage] || [];
+
+    for (var i = 0; i < ms.length; i++) {
+      var top = getMatchTop(origR(r), i);
+      var idSuffix = branchId+'-'+stage+'-'+i;
+      html += '<div style="position:absolute;left:'+left+'px;top:'+top+'px">' + matchCardHTML(ms[i], idSuffix, false) + '</div>';
+    }
+  }
+
+  html += '</div></div>';
+
+  setTimeout(function() {
+    renderBranchSVG(branchId, order, branchData, dir);
+  }, 100);
+
+  return html;
+}
+
+function inferFinalists(semis, finalMatch) {
+  if (!finalMatch) return null;
+  var s1 = semis[0], s2 = semis[1];
+  var w1 = null, w2 = null;
+  var fh = finalMatch.home, fa = finalMatch.away;
+  if (s1.home === fh || s1.home === fa) w1 = s1.home;
+  else if (s1.away === fh || s1.away === fa) w1 = s1.away;
+  if (s2.home === fh || s2.home === fa) w2 = s2.home;
+  else if (s2.away === fh || s2.away === fa) w2 = s2.away;
+  return { s1Winner: w1, s2Winner: w2, final: finalMatch };
+}
+
+function renderDual(data) {
+  var allRounds = data.rounds || {};
+  var semis = allRounds['半决赛'] || [];
+
+  if (semis.length < 2) {
+    document.getElementById('app').innerHTML =
+      '<div class="empty-state" style="text-align:center;padding:60px 16px;color:#555">' +
+      '<div class="icon" style="font-size:48px;margin-bottom:12px">🏆</div>' +
+      '<p>半决赛数据尚未就绪</p></div>';
+    return;
+  }
+
+  // Determine semi winners/losers from KNOWN_RESULTS or final/third data
+  var finalMatch = (allRounds['决赛'] || [])[0] || null;
+  var thirdMatch = (allRounds['季军赛'] || [])[0] || null;
+  var semiWinners = [], semiLosers = [];
+
+  for (var si = 0; si < semis.length; si++) {
+    var sm = semis[si];
+    var w = null, l = null;
+    if (finalMatch) {
+      if (sm.home === finalMatch.home || sm.home === finalMatch.away) w = sm.home;
+      else if (sm.away === finalMatch.home || sm.away === finalMatch.away) w = sm.away;
+    }
+    if (!w && KNOWN_RESULTS[sm.id]) w = KNOWN_RESULTS[sm.id];
+    if (!w && thirdMatch) {
+      if (sm.home === thirdMatch.home || sm.home === thirdMatch.away) l = sm.home;
+      else if (sm.away === thirdMatch.home || sm.away === thirdMatch.away) l = sm.away;
+      if (l) w = l === sm.home ? sm.away : sm.home;
+    }
+    if (w) l = w === sm.home ? sm.away : sm.home;
+    semiWinners.push(w);
+    semiLosers.push(l);
+  }
+
+  // Create virtual entries if we know results but API doesn't have them
+  if (!finalMatch && (semiWinners[0] || semiWinners[1])) {
+    allRounds['决赛'] = [{
+      id: 'final-virtual', home: semiWinners[0] || '待定', away: semiWinners[1] || '待定',
+      time: '', stage: '决赛', replay_available: false, watched: false,
+    }];
+    finalMatch = allRounds['决赛'][0];
+  }
+  if (!thirdMatch && (semiLosers[0] || semiLosers[1])) {
+    allRounds['季军赛'] = [{
+      id: 'third-virtual', home: semiLosers[0] || '待定', away: semiLosers[1] || '待定',
+      time: '', stage: '季军赛', replay_available: false, watched: false,
+    }];
+    thirdMatch = allRounds['季军赛'][0];
+  }
+
+  var semi1 = semis[0], semi2 = semis[1];
+  var branch1 = buildSubBranch(semi1, allRounds);
+  var branch2 = buildSubBranch(semi2, allRounds);
+
+  var total = 0;
+  for (var r in allRounds) total += allRounds[r].length;
+  document.getElementById('matchCount').textContent = total + '场淘汰赛';
+
+  var html = '<div class="branches-wrap"><div class="branches-inner">';
+
+  html += renderBranch(branch1, semi1, 'left', semi1.home + ' vs ' + semi1.away);
+  html += '<div class="branch-divider"></div>';
+  html += renderBranch(branch2, semi2, 'right', semi2.home + ' vs ' + semi2.away);
+
+  html += '</div>';
+
+  // === Final & Third sections ===
+  html += '<div class="final-section">';
+
+  // 🏆 Final
+  html += '<div class="final-row">';
+  if (semiWinners[0] || semiWinners[1]) {
+    var f1f = FLAGS[semiWinners[0]] || '🏳', f2f = FLAGS[semiWinners[1]] || '🏳';
+    html += '<span class="adv-team">'+(semiWinners[0] ? f1f+' '+semiWinners[0] : '🏳 待定')+'</span>';
+    html += '<span class="adv-vs">🏆 冠军战</span>';
+    html += '<span class="adv-team">'+(semiWinners[1] ? semiWinners[1]+' '+f2f : '待定 🏳')+'</span>';
+  } else {
+    html += '<span class="adv-team dim">待定</span><span class="adv-vs">🏆 冠军战</span><span class="adv-team dim">待定</span>';
+  }
+  html += '</div>';
+  if (finalMatch && finalMatch.id !== 'final-virtual') {
+    html += '<div style="display:inline-block;margin-top:2px">'+matchCardHTML(finalMatch,'final-card',true)+'</div>';
+    if (finalMatch.time) html += '<div class="final-time">'+formatTime(finalMatch.time)+'</div>';
+  } else {
+    html += '<div class="final-placeholder">'+(semiWinners[0]||semiWinners[1]?'即将开始':'决赛对阵待定')+'</div>';
+  }
+
+  // 🥉 Third place
+  html += '<div class="third-row">';
+  html += '<div class="final-row">';
+  if (semiLosers[0] || semiLosers[1]) {
+    var l1f = FLAGS[semiLosers[0]] || '🏳', l2f = FLAGS[semiLosers[1]] || '🏳';
+    html += '<span class="adv-team" style="font-size:11px;color:#777">'+(semiLosers[0] ? l1f+' '+semiLosers[0] : '🏳 待定')+'</span>';
+    html += '<span class="adv-vs" style="font-size:10px;color:#555">🥉 季军赛</span>';
+    html += '<span class="adv-team" style="font-size:11px;color:#777">'+(semiLosers[1] ? semiLosers[1]+' '+l2f : '待定 🏳')+'</span>';
+  } else {
+    html += '<span class="adv-team dim" style="font-size:11px">待定</span><span class="adv-vs" style="font-size:10px;color:#555">🥉 季军赛</span><span class="adv-team dim" style="font-size:11px">待定</span>';
+  }
+  html += '</div>';
+  if (thirdMatch && thirdMatch.id !== 'third-virtual') {
+    html += '<div style="display:inline-block;margin-top:2px">'+matchCardHTML(thirdMatch,'third-card',true)+'</div>';
+    if (thirdMatch.time) html += '<div class="final-time">'+formatTime(thirdMatch.time)+'</div>';
+  } else {
+    html += '<div class="final-placeholder">即将开始</div>';
+  }
+  html += '</div>';
+
+  html += '</div></div>';
+  document.getElementById('app').innerHTML = html;
+}
+
+async function loadData() {
+  try {
+    var resp = await fetch('/api/matches');
+    var data = await resp.json();
+    renderDual(data);
+  } catch(e) {
+    document.getElementById('app').innerHTML =
+      '<div class="empty-state" style="text-align:center;padding:60px 16px;color:#555">' +
+      '<div class="icon" style="font-size:48px;margin-bottom:12px">😴</div><p>获取数据失败</p></div>';
+  }
+}
+
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
