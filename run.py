@@ -44,28 +44,55 @@ def _ensure_playwright_browser():
     except Exception:
         pass
 
-    print("=" * 50)
-    print("  首次运行：正在下载浏览器内核（约 3-5 分钟）")
-    print("=" * 50)
-    print()
-    try:
-        from playwright._impl._driver import compute_driver_executable, get_driver_env
-        driver_exe, driver_cli = compute_driver_executable()
+    _mirrors = [
+        "https://npmmirror.com/mirrors/playwright/",
+        "https://playwright.azureedge.net",
+    ]
+
+    from playwright._impl._driver import compute_driver_executable, get_driver_env
+    driver_exe, driver_cli = compute_driver_executable()
+
+    for idx, mirror in enumerate(_mirrors):
+        print("=" * 50)
+        if idx == 0:
+            print("  首次运行：正在下载浏览器内核")
+            print("  使用国内镜像加速，请耐心等待...")
+        else:
+            print("  镜像下载失败，尝试默认源...")
+        print("=" * 50)
+        print()
+
         _env = get_driver_env()
         _env["PLAYWRIGHT_BROWSERS_PATH"] = _bp
-        subprocess.run(
-            [driver_exe, driver_cli, "install", "chromium"],
-            env=_env, check=True,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-        print("  ✓ 浏览器内核下载完成")
+        _env["PLAYWRIGHT_DOWNLOAD_HOST"] = mirror
+
+        try:
+            proc = subprocess.run(
+                [driver_exe, driver_cli, "install", "chromium"],
+                env=_env, check=True,
+                timeout=600,
+            )
+            print()
+            print("  ✓ 浏览器内核下载完成")
+            print()
+            return
+        except subprocess.TimeoutExpired:
+            print(f"  ⏱ 下载超时（超过 10 分钟）")
+        except Exception as e:
+            print(f"  ❌ 下载失败: {e}")
         print()
-    except Exception as e:
-        print(f"  ❌ 下载失败: {e}")
-        print("  请检查网络连接后重新启动")
-        print()
-        time.sleep(5)
-        sys.exit(1)
+
+    print("=" * 50)
+    print("  ❌ 所有下载源均失败")
+    print("=" * 50)
+    print()
+    print("  可能是网络环境受限，请尝试：")
+    print("  1. 关闭 VPN/代理后重新打开")
+    print("  2. 检查路由器或防火墙设置")
+    print("  3. 在可以访问外网的网络下使用")
+    print()
+    time.sleep(10)
+    sys.exit(1)
 
 
 def main():

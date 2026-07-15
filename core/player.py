@@ -56,9 +56,13 @@ def _browsers_path() -> str:
     else:
         return str(Path.home() / ".cache" / "ms-playwright")
 
-def play_match(match: dict, version: str = ""):
+def _setup_env():
     import os
     os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", _browsers_path())
+    os.environ.setdefault("PLAYWRIGHT_DOWNLOAD_HOST", "https://npmmirror.com/mirrors/playwright/")
+
+def play_match(match: dict, version: str = ""):
+    _setup_env()
 
     home = match.get("home", "")
     away = match.get("away", "")
