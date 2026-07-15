@@ -33,8 +33,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -q -r requirements.txt pyinstaller
-      - name: Install Playwright browsers
-        run: playwright install chromium
       - name: Build .exe
         run: pyinstaller build-win.spec
       - uses: actions/upload-artifact@v4

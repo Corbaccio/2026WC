@@ -29,6 +29,8 @@ def _browsers_path() -> str:
 
 def _ensure_playwright_browser():
     """Install Playwright Chromium if missing (first run)."""
+    if sys.platform == 'win32':
+        return
     _bp = _browsers_path()
     os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _bp
 

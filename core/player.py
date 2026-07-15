@@ -73,10 +73,13 @@ def play_match(match: dict, version: str = ""):
 
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch(
+        launch_kw = dict(
             headless=False,
             args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
         )
+        if sys.platform == 'win32':
+            launch_kw["channel"] = "msedge"
+        browser = p.chromium.launch(**launch_kw)
         context = browser.new_context(no_viewport=True, locale="zh-CN")
         page = context.new_page()
 
