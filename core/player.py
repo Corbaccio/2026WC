@@ -1,3 +1,5 @@
+import sys
+
 VERSION_PRIORITY = ["超级绿茵场演播室", "CCTV5解说", "CCTV5演播室", "央视体育剪辑版", "央视体育"]
 
 YANG_SHIPIN_URL = "https://www.yangshipin.cn/video/home?cid=f5tsldorccggid3&lid=10819"
